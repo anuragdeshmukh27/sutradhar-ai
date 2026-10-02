@@ -1,5 +1,7 @@
 # Sutradhar AI: Goals in, done out
 
+Repo: https://github.com/anuragdeshmukh27/sutradhar-ai
+
 Type a one-line goal in English, Hindi or Marathi. A team of agents plans a task graph, rehearses failure (pre-mortem), executes with tools, verifies each step, and **re-plans only the broken branch** when something fails. Humans approve risky steps; every action is logged with an undo.
 
 ## Quick start (Windows)
