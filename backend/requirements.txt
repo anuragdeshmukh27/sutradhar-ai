@@ -1,0 +1,12 @@
+﻿fastapi
+uvicorn[standard]
+langgraph
+pydantic>=2
+sqlalchemy
+openpyxl
+python-dotenv
+pytest
+httpx
+google-genai
+anthropic
+duckduckgo-search
