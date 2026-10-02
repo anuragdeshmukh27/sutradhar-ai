@@ -8,5 +8,4 @@ python-dotenv
 pytest
 httpx
 google-genai
-anthropic
 ddgs
