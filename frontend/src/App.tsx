@@ -65,7 +65,12 @@ function Dashboard() {
 
   const simulate = useCallback(async (nodeId: string) => {
     if (!s.runId) return
-    try { await api.injectFailure(s.runId, nodeId, 'Venue declined') } catch (e) { toast((e as Error).message) }
+    try {
+      const r = await api.injectFailure(s.runId, nodeId, 'Venue declined')
+      toast(r.mode === 'armed'
+        ? 'Failure armed: the venue step will be declined when it runs.'
+        : 'Failure triggered: "Venue declined". Re-planning this branch…', 'info')
+    } catch (e) { toast((e as Error).message) }
   }, [s.runId, toast])
 
   const busy = starting || s.phase === 'planning' || s.phase === 'running'

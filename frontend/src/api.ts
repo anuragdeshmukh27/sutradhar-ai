@@ -70,7 +70,7 @@ export const api = {
   approve: (run: string, node: string) => post(`/runs/${run}/approve/${node}`),
   reject: (run: string, node: string) => post(`/runs/${run}/reject/${node}`),
   injectFailure: (run: string, node_id: string, reason: string) =>
-    post(`/runs/${run}/inject-failure`, { node_id, reason }),
+    post(`/runs/${run}/inject-failure`, { node_id, reason }) as Promise<{ ok: boolean; mode: 'armed' | 'triggered' }>,
   ledger: (run: string) => req<LedgerRow[]>(`/runs/${run}/ledger`),
   outbox: (run: string) => req<Outbox>(`/runs/${run}/outbox`),
   undo: (id: number) => post(`/ledger/${id}/undo`),

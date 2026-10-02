@@ -14,11 +14,11 @@ const TABS: { id: Tab; label: string }[] = [
 export function RightPanel({ s, setTab, onToast }: { s: State; setTab: (t: Tab) => void; onToast: (t: string) => void }) {
   const pending = s.nodes.filter((n) => n.status === 'awaiting_approval').length
   return (
-    <aside className="flex w-[430px] shrink-0 flex-col border-l border-line bg-panel/80">
-      <div className="flex flex-wrap gap-1 border-b border-line p-2">
+    <aside className="flex w-[500px] shrink-0 flex-col border-l border-line bg-panel/80">
+      <div className="flex flex-nowrap gap-0.5 overflow-x-auto border-b border-line p-2">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`relative rounded-lg px-3 py-2 text-[15px] font-semibold transition ${s.tab === t.id ? 'bg-accent/25 text-white' : 'text-mute hover:text-ink'}`}>
+            className={`relative whitespace-nowrap rounded-lg px-2.5 py-2 text-[15px] font-semibold transition ${s.tab === t.id ? 'bg-accent/25 text-white' : 'text-mute hover:text-ink'}`}>
             {t.label}
             {t.id === 'approvals' && pending > 0 && (
               <span className="ml-1.5 rounded-full bg-s-await px-1.5 py-0.5 text-xs font-bold text-black">{pending}</span>

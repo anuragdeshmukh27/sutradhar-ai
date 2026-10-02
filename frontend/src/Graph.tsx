@@ -64,18 +64,20 @@ function layout(nodes: PNode[], edges: { source: string; target: string }[]) {
   dagre.layout(g)
   return (id: string) => {
     const p = g.node(id)
-    return { x: p.x - W / 2, y: p.y - H / 2 }
+    const x = p?.x - W / 2, y = p?.y - H / 2
+    return { x: Number.isFinite(x) ? x : 0, y: Number.isFinite(y) ? y : 0 }
   }
 }
 
 export function Graph({ s, onSimulate }: { s: State; onSimulate: (id: string) => void }) {
-  const { rfNodes, rfEdges } = useMemo(() => {
+  const { rfNodes, rfEdges, key } = useMemo(() => {
     const all = [...s.nodes, ...s.ghosts.filter((g) => !s.nodes.some((n) => n.id === g.id))]
-    const edges = [...s.edges, ...s.ghostEdges]
+    const ids = new Set(all.map((n) => n.id))
+    const edges = [...s.edges, ...s.ghostEdges].filter((e) => ids.has(e.source) && ids.has(e.target))
     const pos = layout(all, edges)
     const ghostIds = new Set(s.ghosts.map((g) => g.id))
     const rfNodes: RFNode<Data>[] = all.map((n) => ({
-      id: n.id, type: 'task', position: pos(n.id), draggable: false,
+      id: n.id, type: 'task', position: pos(n.id), draggable: false, initialWidth: W, initialHeight: H,
       data: { n, fx: ghostIds.has(n.id) ? 'removed' : s.flash[n.id], onSimulate },
     }))
     const rfEdges: RFEdge[] = edges.map((e) => ({
@@ -83,13 +85,14 @@ export function Graph({ s, onSimulate }: { s: State; onSimulate: (id: string) =>
       animated: all.find((n) => n.id === e.target)?.status === 'running',
       style: ghostIds.has(e.source) || ghostIds.has(e.target) ? { stroke: '#fb7185', strokeDasharray: '6 4' } : undefined,
     }))
-    return { rfNodes, rfEdges }
+    // remounting on a new node-id set re-runs fitView, so the graph is always framed
+    return { rfNodes, rfEdges, key: all.map((n) => n.id).sort().join('|') }
   }, [s.nodes, s.edges, s.ghosts, s.ghostEdges, s.flash, onSimulate])
 
   return (
     <div className="relative h-full">
       {rfNodes.length === 0 ? <Empty phase={s.phase} /> : (
-        <ReactFlow nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.12 }}
+        <ReactFlow key={key} nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.12 }}
           minZoom={0.2} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background color="#26325244" gap={28} />
           <Controls showInteractive={false} />

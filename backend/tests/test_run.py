@@ -80,3 +80,41 @@ def test_selfheal_only_touches_failed_branch():
         assert all(n.status == "done" for n in run.graph.nodes)
 
     asyncio.run(go())
+
+
+def test_inject_before_node_runs_is_armed_and_heals():
+    async def go():
+        run = await _start()  # venue is awaiting approval, has not run
+        assert run.inject_failure("venue", "Venue declined") == "armed"
+        run.approve("venue")
+        await wait_for(lambda: "replan_diff" in types(run))
+        rows = ledger.list_for_run(run.id)
+        assert any(r["tool"] == "book_venue" and r["status"] == "failed"
+                   and r["result"]["summary"] == "Venue declined" for r in rows)
+        diff = next(e for e in run.events if e["type"] == "replan_diff")["data"]
+        assert diff["failed_node"] == "venue"
+        await wait_for(lambda: run.graph.get("venue_alt").status == "awaiting_approval")
+        run.approve("venue_alt")
+        await wait_for(lambda: run.status == "complete")
+
+    asyncio.run(go())
+
+
+def test_inject_on_done_node_while_run_waiting():
+    async def go():
+        run = await _start()
+        run.approve("venue")
+        await wait_for(lambda: run.status == "complete")
+        assert run.inject_failure("venue", "Venue declined") == "triggered"
+        await wait_for(lambda: "replan_diff" in types(run))
+
+    asyncio.run(go())
+
+
+def test_final_step_depends_on_venue_and_permissions():
+    from app.models import PlannerOutput
+    from conftest import PLAN, N
+    nodes = [n.model_copy(deep=True) for n in PLAN]
+    nodes[-1] = N("run_event", "schedule_event", ["venue"], title="Fest", date="D1")  # forgot permissions
+    out = PlannerOutput(nodes=nodes)
+    assert {"venue", "permissions"} <= set(out.nodes[-1].depends_on)

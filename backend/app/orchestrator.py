@@ -105,21 +105,29 @@ class Run:
             raise ValueError("node is not awaiting approval")
         return n
 
-    def inject_failure(self, node_id: str, reason: str):
+    def inject_failure(self, node_id: str, reason: str) -> str:
+        """Fail a node whatever state it is in. Returns "armed" (node has not finished yet: the tool call
+        will return `reason` when it executes) or "triggered" (node already finished: re-plan starts now)."""
         n = self.graph.get(node_id)
         if n is None:
             raise KeyError("node not found")
-        if n.status == "running":
-            self.injected[node_id] = reason  # picked up when the tool call returns
-            return
+        label = n.subtitle or n.title
+        if n.status in ("running", "pending", "awaiting_approval") or (n.status == "flagged" and not n.error):
+            self.injected[node_id] = reason  # picked up when the tool call runs / returns
+            self.thought("system", f"Failure armed for '{label}': it will fail with '{reason}' when it runs.")
+            return "armed"
+        # finished (done) or already failed: record the failure and heal now
+        ledger.record(self.id, node_id, "system", n.tool, n.tool_args, {"ok": False, "summary": reason},
+                      n.reversible)
         n.status, n.error = "flagged", reason
         self.approved.discard(node_id)
         self.emit_status(n)
-        self.thought("system", f"Failure injected into '{n.subtitle or n.title}': {reason}")
+        self.thought("system", f"Failure injected into '{label}': {reason}")
         if self.task is None or self.task.done():
             self._launch("select")  # run had finished: resume to heal
         else:
             self.decisions.put_nowait(node_id)  # wake the loop if it is waiting for approval
+        return "triggered"
 
 
 # ---- graph nodes ------------------------------------------------------------------------------

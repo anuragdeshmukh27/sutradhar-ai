@@ -59,6 +59,7 @@ class PlannerOutput(BaseModel):
     def _check(self):
         if not 6 <= len(self.nodes) <= 10:
             raise ValueError(f"plan must have 6-10 nodes, got {len(self.nodes)}")
+        enforce_final_deps(self.nodes)
         validate_dag(self.nodes)
         return self
 
@@ -133,3 +134,30 @@ class TaskGraph(BaseModel):
 
     def edges(self) -> list[dict]:
         return [{"source": d, "target": n.id} for n in self.nodes for d in n.depends_on]
+
+
+def enforce_final_deps(nodes: list[PlanNode], all_nodes: list[PlanNode] | None = None) -> None:
+    """The final event step (a schedule_event nobody depends on) must wait for every venue booking and
+    permission step. Adds the missing depends_on in place (never creates a cycle)."""
+    pool = all_nodes or nodes
+    needed = {n.id for n in pool if n.tool in ("book_venue", "request_permission")}
+    depended = {d for n in pool for d in n.depends_on}
+    for fin in nodes:
+        if fin.tool != "schedule_event" or fin.id in depended:
+            continue
+        skip = {fin.id} | _desc(pool, fin.id)
+        for i in sorted(needed - skip):
+            if i not in fin.depends_on:
+                fin.depends_on.append(i)
+
+
+def _desc(pool: list[PlanNode], root: str) -> set[str]:
+    out: set[str] = set()
+    frontier = [root]
+    while frontier:
+        cur = frontier.pop()
+        for n in pool:
+            if cur in n.depends_on and n.id not in out:
+                out.add(n.id)
+                frontier.append(n.id)
+    return out

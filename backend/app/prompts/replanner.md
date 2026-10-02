@@ -7,6 +7,7 @@ Rules:
 - Choose a different approach for the failed step that avoids the stated failure reason (for example, an alternative venue). Do not retry the same thing.
 - Keep the ids of downstream steps that still make sense so the change is easy to track; use a new id for the replacement of the failed step if the approach changed.
 - depends_on may reference ONLY the completed node ids listed below or nodes in your replacement list. The graph must be acyclic.
+- The final run/event step must depend on the venue and permission steps.
 - Use ONLY the tools listed below. Stay within the remaining budget.
 - success_criteria: one concrete checkable sentence. reversible: false only for actions that cannot be undone.
 - explanation: one short sentence on what you changed.

@@ -2,7 +2,7 @@ import json
 
 from . import llm, prompts, tools
 from .config import today
-from .models import Node, PlanNode, ReplanDiff, ReplanOutput, TaskGraph, validate_dag
+from .models import Node, PlanNode, ReplanDiff, ReplanOutput, TaskGraph, enforce_final_deps, validate_dag
 
 
 def affected_ids(graph: TaskGraph, failed_id: str) -> set[str]:
@@ -38,6 +38,7 @@ def replan(goal: str, graph: TaskGraph, failed_id: str, reason: str, language: s
         n = Node(**pn.model_dump())
         n.depends_on = [d for d in n.depends_on if d in kept_ids or d in {x.id for x in out.nodes}]
         new_nodes.append(n)
+    enforce_final_deps(new_nodes, [*kept, *new_nodes])
     validate_dag(new_nodes, frozenset(kept_ids))
     for n in new_nodes:
         n.reversible = tools.REGISTRY[n.tool].reversible

@@ -80,7 +80,7 @@ function onEvent(s: State, { type, data: d, ts }: WsEvent): State {
       return {
         ...s,
         nodes: patch(s.nodes, d.node_id, (n) => ({ status: d.status, error: d.error, risk: d.risk ?? n.risk })),
-        tick: s.tick + (d.status === 'done' ? 1 : 0),
+        tick: s.tick + (d.status === 'done' || d.status === 'flagged' ? 1 : 0),
       }
     case 'tool_call':
       return {

@@ -9,6 +9,7 @@ Rules:
 - Maximise parallelism: only add depends_on where one step truly needs another's output. The graph must be acyclic and have a clear start.
 - Include these kinds of steps when relevant to the goal: research, venue booking (book_venue), permissions (request_permission), publicity (create_poster_brief, send_email), scheduling (schedule_event), budget tracking (update_tracker), and a final run/execution step (schedule_event or update_tracker).
 - Order of a typical event: research -> venue -> permissions (depends on venue) -> publicity -> run event (depends on venue and permissions).
+- The FINAL run/event step (schedule_event) MUST list every venue booking node AND every permission node in depends_on, so it can never run before they finish.
 - success_criteria must be one concrete, checkable sentence about the tool result.
 - est_cost_inr: realistic rupees for that step; the total must stay within the budget.
 - reversible: true unless the action cannot be undone (e.g. book_venue is false).

@@ -80,10 +80,10 @@ async def reject(run_id: str, node_id: str):
 @app.post("/runs/{run_id}/inject-failure")
 async def inject_failure(run_id: str, req: FailureRequest):
     try:
-        _run(run_id).inject_failure(req.node_id, req.reason)
+        mode = _run(run_id).inject_failure(req.node_id, req.reason)
     except KeyError as e:
         raise HTTPException(404, str(e))
-    return {"ok": True}
+    return {"ok": True, "mode": mode}
 
 
 @app.get("/runs/{run_id}/ledger")
