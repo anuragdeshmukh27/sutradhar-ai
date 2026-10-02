@@ -7,3 +7,4 @@ dist/
 backend/data/
 backend/*.db
 .pytest_cache/
+backend/files/

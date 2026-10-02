@@ -16,6 +16,8 @@ CASSETTE_DIR = Path(__file__).resolve().parents[1] / "cassettes"
 RETRYABLE = {429, 503}
 MAX_ATTEMPTS = 4  # per model
 BASE_DELAY = 1.0  # seconds; doubles each attempt
+COOLDOWN = 60.0  # after a model exhausts its retries, skip it for this long (when a fallback exists)
+_skip_until: dict[str, float] = {}
 
 
 class LLMError(Exception):
@@ -35,9 +37,10 @@ class GeminiProvider:
             model=model,
             contents=prompt,
             config=types.GenerateContentConfig(
-                system_instruction=system or None,
+                system_instruction=(system + "\n\n" if system else "")
+                + "Reply with JSON only, matching this JSON Schema:\n"
+                + json.dumps(schema.model_json_schema()),
                 response_mime_type="application/json",
-                response_schema=schema,
             ),
         )
         return resp.text
@@ -59,7 +62,8 @@ def _generate_with_fallback(provider, system: str, prompt: str, schema: Type[Bas
     fallback = os.getenv("LLM_FALLBACK_MODEL")
     models = [primary] + ([fallback] if fallback and fallback != primary else [])
     last: Exception | None = None
-    for model in models:
+    live = [m for m in models if _skip_until.get(m, 0) <= time.monotonic()]
+    for model in live or models:
         for attempt in range(MAX_ATTEMPTS):
             try:
                 return provider.generate(model, system, prompt, schema)
@@ -69,6 +73,7 @@ def _generate_with_fallback(provider, system: str, prompt: str, schema: Type[Bas
                 last = exc
                 if attempt < MAX_ATTEMPTS - 1:
                     time.sleep(BASE_DELAY * 2**attempt)
+        _skip_until[model] = time.monotonic() + COOLDOWN
         print(f"[llm] {model} unavailable after {MAX_ATTEMPTS} attempts; trying next model")
     raise LLMError("The AI service is busy right now. Please try again in a minute.") from last
 
