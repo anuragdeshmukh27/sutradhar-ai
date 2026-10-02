@@ -44,6 +44,16 @@ export interface Outbox {
 }
 export interface WsEvent { type: string; data: Record<string, any>; ts: number }
 
+/** Turn raw technical errors into messages a judge can read. */
+export function friendly(msg: string): string {
+  if (/getaddrinfo|errno|connecterror|network is unreachable|name or service|proxyerror|timed? ?out|failed to fetch|econn/i.test(msg))
+    return 'No internet: switch on Demo mode'
+  if (/LLM call failed|Traceback|Exception|httpx?/i.test(msg)) return 'The AI service had a problem. Try Demo mode.'
+  return msg
+}
+
+export interface Scenario { name: string; budget_inr: number; deadline: string; goals: Record<Lang, string> }
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
@@ -65,6 +75,7 @@ const post = (path: string, body?: unknown) =>
   req<any>(path, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
 
 export const api = {
+  scenario: (name: string) => req<Scenario>(`/scenarios/${name}`),
   createRun: (b: { goal: string; budget_inr: number; deadline: string; language: Lang; scenario: string }) =>
     post('/runs', b) as Promise<{ run_id: string }>,
   approve: (run: string, node: string) => post(`/runs/${run}/approve/${node}`),

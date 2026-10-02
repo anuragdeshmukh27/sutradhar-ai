@@ -1,5 +1,5 @@
 import { Component, useCallback, useEffect, useReducer, useState, type ReactNode } from 'react'
-import { api, openSocket } from './api'
+import { api, friendly, openSocket } from './api'
 import { Graph } from './Graph'
 import { LeftPanel, type FormValues } from './LeftPanel'
 import { RightPanel } from './RightPanel'
@@ -25,7 +25,7 @@ function Dashboard() {
   const [starting, setStarting] = useState(false)
 
   const toast = useCallback((text: string, kind: 'error' | 'info' | 'success' = 'error') =>
-    dispatch({ kind: 'toast', toast: { kind, text } }), [])
+    dispatch({ kind: 'toast', toast: { kind, text: kind === 'error' ? friendly(text) : text } }), [])
 
   // live socket for the current run
   useEffect(() => {

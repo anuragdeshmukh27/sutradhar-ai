@@ -1,11 +1,6 @@
-import { useRef, useState } from 'react'
-import type { Lang } from './api'
+import { useEffect, useRef, useState } from 'react'
+import { api, type Lang } from './api'
 
-export const GOALS: Record<Lang, string> = {
-  en: 'Run a 2-day tech fest for 300 students with a budget of ₹1.5 lakh in 3 weeks.',
-  hi: '₹1.5 लाख के बजट में 3 हफ़्तों के अंदर 300 छात्रों के लिए 2 दिन का टेक फ़ेस्ट आयोजित करो।',
-  mr: '₹1.5 लाखाच्या बजेटमध्ये 3 आठवड्यांत 300 विद्यार्थ्यांसाठी 2 दिवसांचा टेक फेस्ट आयोजित करा.',
-}
 const SPEECH: Record<Lang, string> = { en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN' }
 const LABEL: Record<Lang, string> = { en: 'English', hi: 'हिन्दी', mr: 'मराठी' }
 
@@ -19,16 +14,24 @@ export function LeftPanel({ busy, onRun, onToast }: {
   onToast: (text: string) => void
 }) {
   const [lang, setLang] = useState<Lang>('en')
-  const [goal, setGoal] = useState(GOALS.en)
+  const [goals, setGoals] = useState<Record<Lang, string> | null>(null) // sample goals come from the backend scenario file
+  const [goal, setGoal] = useState('')
   const [budget, setBudget] = useState(150000)
   const [deadline, setDeadline] = useState('3 weeks')
   const [demo, setDemo] = useState(true)
   const [listening, setListening] = useState(false)
   const rec = useRef<any>(null)
 
+  useEffect(() => {
+    api.scenario('techfest').then((sc) => {
+      setGoals(sc.goals); setGoal(sc.goals.en); setBudget(sc.budget_inr); setDeadline(sc.deadline)
+    }).catch(() => onToast('Could not load the sample goal. Is the backend running?'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const pickLang = (l: Lang) => {
     // swap the sample goal only if the user hasn't typed their own
-    if (Object.values(GOALS).includes(goal) || !goal.trim()) setGoal(GOALS[l])
+    if (goals && (Object.values(goals).includes(goal) || !goal.trim())) setGoal(goals[l])
     setLang(l)
   }
 
@@ -38,7 +41,11 @@ export function LeftPanel({ busy, onRun, onToast }: {
     r.lang = SPEECH[lang]
     r.interimResults = false
     r.onresult = (e: any) => setGoal(Array.from(e.results).map((x: any) => x[0].transcript).join(' '))
-    r.onerror = (e: any) => onToast(`Mic error: ${e.error}`)
+    r.onerror = (e: any) => onToast(e.error === 'network' || e.error === 'service-not-allowed'
+      ? 'Mic needs internet. Type your goal instead.'
+      : e.error === 'not-allowed' ? 'Mic permission is blocked. Type your goal instead.'
+      : e.error === 'no-speech' || e.error === 'aborted' ? 'Did not hear anything. Try again or type your goal.'
+      : 'Mic is not available. Type your goal instead.')
     r.onend = () => setListening(false)
     rec.current = r
     setListening(true)

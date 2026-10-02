@@ -1,8 +1,10 @@
 """Single LLM entry point: provider interface, live/record/replay, retry + model fallback."""
+import difflib
 import hashlib
-import re
 import json
+import logging
 import os
+import re
 import time
 from pathlib import Path
 from typing import Type, TypeVar
@@ -19,6 +21,8 @@ MAX_ATTEMPTS = 4  # per model
 BASE_DELAY = 1.0  # seconds; doubles each attempt
 COOLDOWN = 60.0  # after a model exhausts its retries, skip it for this long (when a fallback exists)
 _skip_until: dict[str, float] = {}
+log = logging.getLogger("sutradhar")
+NO_INTERNET = "No internet: switch on Demo mode (or reconnect and try again)."
 
 
 class LLMError(Exception):
@@ -69,6 +73,8 @@ def _generate_with_fallback(provider, system: str, prompt: str, schema: Type[Bas
             try:
                 return provider.generate(model, system, prompt, schema)
             except Exception as exc:  # noqa: BLE001
+                if _is_network_error(exc):
+                    raise LLMError(NO_INTERNET) from exc
                 if provider.status_code(exc) not in RETRYABLE:
                     raise LLMError(f"LLM call failed: {exc}") from exc
                 last = exc
@@ -77,6 +83,17 @@ def _generate_with_fallback(provider, system: str, prompt: str, schema: Type[Bas
         _skip_until[model] = time.monotonic() + COOLDOWN
         print(f"[llm] {model} unavailable after {MAX_ATTEMPTS} attempts; trying next model")
     raise LLMError("The AI service is busy right now. Please try again in a minute.") from last
+
+
+def _is_network_error(exc: BaseException | None) -> bool:
+    while exc is not None:
+        text = f"{type(exc).__name__} {exc}".lower()
+        if isinstance(exc, (ConnectionError, TimeoutError)) or any(
+                t in text for t in ("getaddrinfo", "errno 11001", "connecterror", "connecttimeout", "name or service",
+                                    "temporary failure in name", "network is unreachable", "proxyerror")):
+            return True
+        exc = exc.__cause__ or exc.__context__
+    return False
 
 
 def _key(system: str, prompt: str, schema: Type[BaseModel]) -> str:
@@ -89,21 +106,49 @@ def _load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-def call(prompt: str, schema: Type[T], system: str = "", scenario: str = "default") -> T:
-    """Return a validated `schema` instance. Mode comes from LLM_MODE (live|record|replay)."""
+def _lang_of(prompt: str, lang: str) -> str:
+    return lang or (m.group(1) if (m := re.search(r"Language: (\w+)", prompt)) else "")
+
+
+def _closest(data: dict, schema: Type[T], prompt: str, lang: str) -> T | None:
+    """Demo-mode safety net: the recorded response for the same agent (schema) + language whose prompt
+    is most similar, i.e. the same step of the flow. Never touches the network."""
+    best, best_score = None, -1.0
+    for entry in data.values():
+        if not isinstance(entry, dict) or entry.get("schema") != schema.__name__:
+            continue
+        if lang and entry.get("lang") and entry["lang"] != lang:
+            continue
+        score = difflib.SequenceMatcher(None, prompt, entry.get("prompt", ""), autojunk=False).ratio()
+        if score > best_score:
+            best, best_score = entry, score
+    if best is None:
+        return None
+    log.warning("demo cassette: exact key missed for %s (%s); using closest recorded response (similarity %.2f)",
+                schema.__name__, lang or "?", best_score)
+    try:
+        return schema.model_validate_json(best["response"])
+    except ValidationError:
+        return None
+
+
+def call(prompt: str, schema: Type[T], system: str = "", scenario: str = "default", lang: str = "") -> T:
+    """Return a validated `schema` instance. Mode comes from LLM_MODE (live|record|replay).
+    A named scenario (the UI's Demo mode) always replays from its cassette and never goes live."""
     mode = os.getenv("LLM_MODE", "live")
     key = _key(system, prompt, schema)
     cassette = CASSETTE_DIR / f"{scenario}.json"
+    lang = _lang_of(prompt, lang)
 
-    # Demo mode (a named scenario with a recorded cassette) replays even when LLM_MODE=live;
-    # a cassette miss then falls through to a live call instead of failing.
-    auto = mode == "live" and scenario != "default" and cassette.exists()
-    if mode == "replay" or auto:
+    if mode == "replay" or (mode == "live" and scenario != "default"):
         data = _load(cassette)
-        if key in data:
-            return schema.model_validate_json(data[key])
-        if not auto:
-            raise LLMError(f"No recorded response for this prompt in cassette '{scenario}'.")
+        entry = data.get(key)
+        if isinstance(entry, dict):
+            return schema.model_validate_json(entry["response"])
+        found = _closest(data, schema, prompt, lang)
+        if found is not None:
+            return found
+        raise LLMError(f"Demo recording has no '{schema.__name__}' response for this step.")
 
     provider = _provider()
     p = prompt
@@ -120,6 +165,6 @@ def call(prompt: str, schema: Type[T], system: str = "", scenario: str = "defaul
     if mode == "record":
         CASSETTE_DIR.mkdir(exist_ok=True)
         data = _load(cassette)
-        data[key] = result.model_dump_json()
+        data[key] = {"schema": schema.__name__, "lang": lang, "prompt": prompt, "response": result.model_dump_json()}
         cassette.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     return result

@@ -9,6 +9,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_tmp / 'test.db'}"
 os.environ["FILES_DIR"] = str(_tmp / "files")
 os.environ["STEP_DELAY"] = "0"
 os.environ["RUN_DELAY"] = "0"
+os.environ["WEB_SEARCH_OFFLINE"] = "1"
 os.environ["RISK_THRESHOLD"] = "0.5"
 os.environ["FAILURE_INJECTION"] = "false"
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -36,7 +37,7 @@ PLAN = [
 ]
 
 
-def fake_call(prompt, schema, system="", scenario="default"):
+def fake_call(prompt, schema, system="", scenario="default", lang=""):
     if schema is PlannerOutput:
         return PlannerOutput(nodes=PLAN)
     if schema is CriticOutput:

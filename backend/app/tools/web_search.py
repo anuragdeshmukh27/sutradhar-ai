@@ -1,3 +1,5 @@
+import os
+
 from . import Tool, register
 
 CANNED = [
@@ -23,12 +25,14 @@ class WebSearch(Tool):
         query = str(args.get("query", "tech fest"))
         results, source = CANNED, "offline-fallback"
         try:
+            if os.getenv("WEB_SEARCH_OFFLINE"):  # tests / forced offline demo
+                raise OSError("offline")
             try:
                 from ddgs import DDGS
             except ImportError:
                 from duckduckgo_search import DDGS
 
-            found = list(DDGS(timeout=5).text(query, max_results=5))
+            found = list(DDGS(timeout=3).text(query, max_results=5))
             if found:  # top up with canned tips so a thin result set never fails "at least N results" criteria
                 results, source = (found + CANNED)[:max(5, len(found))], "duckduckgo"
         except Exception:  # offline or rate-limited: use canned results

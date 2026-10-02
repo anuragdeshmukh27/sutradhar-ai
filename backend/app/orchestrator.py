@@ -149,7 +149,7 @@ def _build_graph(run: Run):
     async def premortem(_: State) -> State:
         run.thought("critic", "Running a pre-mortem: imagine this plan failed, why?")
         try:
-            out = await asyncio.to_thread(critic.assess, run.goal, run.graph.nodes, run.budget_inr, run.scenario)
+            out = await asyncio.to_thread(critic.assess, run.goal, run.graph.nodes, run.budget_inr, run.scenario, run.language)
             run.risk_summary = out.summary
         except llm.LLMError as exc:
             run.thought("critic", f"Critic unavailable ({exc}); using default risk estimates.")
@@ -203,7 +203,7 @@ def _build_graph(run: Run):
                 res = {**res, "ok": False, "summary": late}
             run.emit("tool_call", {"node_id": n.id, "tool": n.tool, "args": n.tool_args, "ok": res["ok"],
                                    "summary": res["summary"], "ledger_id": res.get("ledger_id")})
-            v = await asyncio.to_thread(verifier.verify, n, res, run.scenario)
+            v = await asyncio.to_thread(verifier.verify, n, res, run.scenario, run.language)
             run.emit("verify_result", {"node_id": n.id, "passed": v.passed, "reason": v.reason})
             run.thought("verifier", f"{n.subtitle or n.title}: {'PASS' if v.passed else 'FAIL'}: {v.reason}")
             n.result = {"summary": res["summary"], "data": res.get("data", {}), "ledger_id": res.get("ledger_id")}
@@ -246,7 +246,7 @@ def _build_graph(run: Run):
                                        run.budget_inr, run.scenario)
         new = [n for n in g.nodes if n.id in set(diff.added) | set(diff.changed)]
         try:
-            await asyncio.to_thread(critic.assess, run.goal, new, run.budget_inr, run.scenario)
+            await asyncio.to_thread(critic.assess, run.goal, new, run.budget_inr, run.scenario, run.language)
         except llm.LLMError:
             for n in new:
                 n.fail_probability = 0.2 if n.reversible else 0.6

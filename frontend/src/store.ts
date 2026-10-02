@@ -1,4 +1,4 @@
-import type { Edge, PNode, WsEvent } from './api'
+import { friendly, type Edge, type PNode, type WsEvent } from './api'
 
 export interface Thought { agent: string; text: string; ts: number }
 export interface Approval { node_id: string; title: string; subtitle: string; risk: number; reason: string; failure_modes: string[]; open: boolean }
@@ -114,7 +114,7 @@ function onEvent(s: State, { type, data: d, ts }: WsEvent): State {
     case 'agent_thought':
       return { ...s, thoughts: [...s.thoughts, { agent: d.agent, text: d.text, ts }] }
     case 'error':
-      return { ...s, phase: 'failed', toasts: [...s.toasts, mk({ kind: 'error', text: d.message })] }
+      return { ...s, phase: 'failed', toasts: [...s.toasts, mk({ kind: 'error', text: friendly(String(d.message)) })] }
     default:
       return s
   }

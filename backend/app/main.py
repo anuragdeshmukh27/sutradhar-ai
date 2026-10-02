@@ -1,4 +1,5 @@
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import ledger
-from .config import FILES_DIR
+from .config import BACKEND_DIR, FILES_DIR
 from .db import CalendarEvent, Email, init_db, row_dict, session
 from .orchestrator import RUNS, Run
 
@@ -42,6 +43,15 @@ def _run(run_id: str) -> Run:
     if run is None:
         raise HTTPException(404, "run not found")
     return run
+
+
+@app.get("/scenarios/{name}")
+async def get_scenario(name: str):
+    """Sample goals + defaults for the UI (single source of truth: scenarios/<name>.json)."""
+    path = BACKEND_DIR / "scenarios" / f"{Path(name).name}.json"
+    if not path.is_file():
+        raise HTTPException(404, "scenario not found")
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @app.post("/runs")

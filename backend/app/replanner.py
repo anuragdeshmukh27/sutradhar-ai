@@ -1,7 +1,7 @@
 import json
 
 from . import llm, prompts, tools
-from .config import today
+from .config import num, today
 from .models import Node, PlanNode, ReplanDiff, ReplanOutput, TaskGraph, enforce_final_deps, validate_dag
 
 
@@ -20,14 +20,14 @@ def replan(goal: str, graph: TaskGraph, failed_id: str, reason: str, language: s
 
     plan_fields = set(PlanNode.model_fields)
     user = (
-        f"Goal: {goal}\nLanguage: {language}\nTotal budget (INR): {budget_inr}\n"
+        f"Goal: {goal}\nLanguage: {language}\nTotal budget (INR): {num(budget_inr)}\n"
         f"FAILED step: {failed_id}\nFailure reason: {reason}\n"
         f"Steps to regenerate (failed step + its dependents):\n"
         f"{json.dumps([n.model_dump(include=plan_fields) for n in old.values()], ensure_ascii=False)}\n"
         f"Kept steps (do not change; you may depend on them):\n"
         f"{json.dumps([{'id': n.id, 'title': n.subtitle or n.title} for n in kept], ensure_ascii=False)}"
     )
-    out = llm.call(user, ReplanOutput, scenario=scenario,
+    out = llm.call(user, ReplanOutput, scenario=scenario, lang=language,
                    system=prompts.load("replanner", language=language, tools=tools.describe(), today=today()))
 
     new_nodes: list[Node] = []

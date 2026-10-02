@@ -1,17 +1,18 @@
 import json
 
 from . import llm, prompts
+from .config import num
 from .models import CriticOutput, Node
 from .risk import risk_score
 
 
-def assess(goal: str, nodes: list[Node], budget_inr: float, scenario: str = "default") -> CriticOutput:
+def assess(goal: str, nodes: list[Node], budget_inr: float, scenario: str = "default", language: str = "en") -> CriticOutput:
     """Pre-mortem: annotate `nodes` in place with fail_probability, failure_modes, mitigation, risk."""
     brief = [{"node_id": n.id, "title": n.subtitle or n.title, "tool": n.tool, "depends_on": n.depends_on,
               "est_cost_inr": n.est_cost_inr, "reversible": n.reversible, "success_criteria": n.success_criteria}
              for n in nodes]
-    user = f"Goal: {goal}\nBudget (INR): {budget_inr}\nPlan nodes:\n{json.dumps(brief, ensure_ascii=False)}"
-    out = llm.call(user, CriticOutput, system=prompts.load("critic"), scenario=scenario)
+    user = f"Goal: {goal}\nBudget (INR): {num(budget_inr)}\nPlan nodes:\n{json.dumps(brief, ensure_ascii=False)}"
+    out = llm.call(user, CriticOutput, system=prompts.load("critic"), scenario=scenario, lang=language)
     by_id = {r.node_id: r for r in out.risks}
     for n in nodes:
         r = by_id.get(n.id)
