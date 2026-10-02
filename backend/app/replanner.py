@@ -17,16 +17,15 @@ def replan(goal: str, graph: TaskGraph, failed_id: str, reason: str, language: s
     kept = [n for n in graph.nodes if n.id not in affected]
     kept_ids = {n.id for n in kept}
     old = {n.id: n for n in graph.nodes if n.id in affected}
-    spent = sum(n.est_cost_inr for n in kept if n.status == "done")
 
     plan_fields = set(PlanNode.model_fields)
     user = (
-        f"Goal: {goal}\nLanguage: {language}\nRemaining budget (INR): {budget_inr - spent}\n"
+        f"Goal: {goal}\nLanguage: {language}\nTotal budget (INR): {budget_inr}\n"
         f"FAILED step: {failed_id}\nFailure reason: {reason}\n"
         f"Steps to regenerate (failed step + its dependents):\n"
         f"{json.dumps([n.model_dump(include=plan_fields) for n in old.values()], ensure_ascii=False)}\n"
-        f"Completed/kept steps (do not change; you may depend on them):\n"
-        f"{json.dumps([{'id': n.id, 'title': n.subtitle or n.title, 'status': n.status} for n in kept], ensure_ascii=False)}"
+        f"Kept steps (do not change; you may depend on them):\n"
+        f"{json.dumps([{'id': n.id, 'title': n.subtitle or n.title} for n in kept], ensure_ascii=False)}"
     )
     out = llm.call(user, ReplanOutput, scenario=scenario,
                    system=prompts.load("replanner", language=language, tools=tools.describe(), today=today()))

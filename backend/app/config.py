@@ -11,7 +11,12 @@ def risk_threshold() -> float:
 
 
 def step_delay() -> float:
-    return float(os.getenv("STEP_DELAY", "0.8"))
+    return float(os.getenv("STEP_DELAY", "1.4"))
+
+
+def run_delay() -> float:
+    """Pause while a node shows as running, so the audience can see it."""
+    return float(os.getenv("RUN_DELAY", "1.0"))
 
 
 def today() -> str:

@@ -5,8 +5,8 @@ import type { PNode } from './api'
 import type { State } from './store'
 import { STATUS, pct, riskColor } from './theme'
 
-const W = 300
-const H = 150
+const W = 380
+const H = 190
 
 interface Data extends Record<string, unknown> {
   n: PNode
@@ -20,30 +20,30 @@ function TaskNode({ data }: NodeProps<RFNode<Data>>) {
   const fxClass = fx === 'added' || fx === 'changed' ? 'flash-green' : fx === 'removed' ? 'flash-red' : ''
   return (
     <div
-      className={`rounded-2xl border-2 bg-panel px-4 py-3 text-ink shadow-xl ${n.status === 'running' ? 'pulse-ring' : ''} ${fxClass}`}
+      className={`rounded-2xl border-2 bg-panel px-5 py-4 text-ink shadow-xl ${n.status === 'running' ? 'pulse-ring' : ''} ${fxClass}`}
       style={{ width: W, minHeight: H - 30, borderColor: fx === 'removed' ? '#fb7185' : st.color, transition: 'border-color .3s' }}
     >
       <Handle type="target" position={Position.Left} className="!bg-line !border-0" />
       <div className="flex items-center justify-between gap-2">
-        <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ background: st.color + '26', color: st.color }}>
+        <span className="rounded-full px-3 py-1 text-base font-semibold" style={{ background: st.color + '26', color: st.color }}>
           {st.icon} {st.label}
         </span>
-        <span className="rounded-full px-2.5 py-0.5 text-xs font-bold" style={{ background: riskColor(n.risk) + '26', color: riskColor(n.risk) }}
+        <span className="rounded-full px-3 py-1 text-base font-bold" style={{ background: riskColor(n.risk) + '26', color: riskColor(n.risk) }}
           title="Pre-mortem risk">
           risk {pct(n.risk)}
         </span>
       </div>
-      <div className={`mt-2 text-[17px] font-semibold leading-snug ${fx === 'removed' ? 'line-through opacity-70' : ''}`}>{n.title}</div>
-      {n.subtitle && n.subtitle !== n.title && <div className="text-sm text-mute">{n.subtitle}</div>}
-      <div className="mt-2 flex items-center justify-between text-xs text-mute">
-        <span className="rounded bg-panel2 px-1.5 py-0.5 font-mono">{n.tool}</span>
+      <div className={`mt-3 text-[26px] font-bold leading-tight ${fx === 'removed' ? 'line-through opacity-70' : ''}`}>{n.title}</div>
+      {n.subtitle && n.subtitle !== n.title && <div className="mt-1 text-lg leading-snug text-mute">{n.subtitle}</div>}
+      <div className="mt-3 flex items-center justify-between text-base text-mute">
+        <span className="rounded bg-panel2 px-2 py-0.5 font-mono">{n.tool}</span>
         <span>{n.est_cost_inr ? `₹${n.est_cost_inr.toLocaleString('en-IN')}` : ''}{!n.reversible && ' · irreversible'}</span>
       </div>
-      {n.error && <div className="mt-2 truncate rounded bg-s-flagged/15 px-2 py-1 text-xs text-s-flagged" title={n.error}>{n.error}</div>}
+      {n.error && <div className="mt-2 truncate rounded bg-s-flagged/15 px-2 py-1 text-base text-s-flagged" title={n.error}>{n.error}</div>}
       {n.tool === 'book_venue' && onSimulate && !fx && (
         <button
           onClick={() => onSimulate(n.id)}
-          className="nodrag mt-2 w-full rounded-lg border border-s-flagged/60 bg-s-flagged/10 py-1.5 text-sm font-semibold text-s-flagged hover:bg-s-flagged/25"
+          className="nodrag mt-2 w-full rounded-lg border border-s-flagged/60 bg-s-flagged/10 py-2 text-base font-semibold text-s-flagged hover:bg-s-flagged/25"
         >
           ⚡ Simulate failure
         </button>
@@ -57,7 +57,7 @@ const nodeTypes = { task: TaskNode }
 
 function layout(nodes: PNode[], edges: { source: string; target: string }[]) {
   const g = new dagre.graphlib.Graph()
-  g.setGraph({ rankdir: 'LR', nodesep: 36, ranksep: 90 })
+  g.setGraph({ rankdir: 'LR', nodesep: 24, ranksep: 70 })
   g.setDefaultEdgeLabel(() => ({}))
   nodes.forEach((n) => g.setNode(n.id, { width: W, height: H }))
   edges.forEach((e) => g.setEdge(e.source, e.target))
@@ -92,8 +92,8 @@ export function Graph({ s, onSimulate }: { s: State; onSimulate: (id: string) =>
   return (
     <div className="relative h-full">
       {rfNodes.length === 0 ? <Empty phase={s.phase} /> : (
-        <ReactFlow key={key} nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.12 }}
-          minZoom={0.2} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
+        <ReactFlow key={key} nodes={rfNodes} edges={rfEdges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04 }}
+          minZoom={0.15} nodesConnectable={false} proOptions={{ hideAttribution: true }}>
           <Background color="#26325244" gap={28} />
           <Controls showInteractive={false} />
         </ReactFlow>

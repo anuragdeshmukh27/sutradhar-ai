@@ -11,7 +11,7 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from . import critic, executor, ledger, llm, planner, replanner, verifier
-from .config import risk_threshold, step_delay
+from .config import risk_threshold, run_delay, step_delay
 from .models import Node, TaskGraph
 from .risk import needs_approval
 
@@ -195,6 +195,7 @@ def _build_graph(run: Run):
             n.status = "running"
             run.emit_status(n)
             run.thought("executor", f"Running '{n.subtitle or n.title}' with {n.tool}")
+            await asyncio.sleep(run_delay())
             reason = run.injected.pop(n.id, None)
             res = await asyncio.to_thread(executor.execute_node, run.id, n, run.budget_inr, reason)
             late = run.injected.pop(n.id, None)

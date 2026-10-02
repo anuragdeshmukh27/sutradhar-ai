@@ -9,4 +9,4 @@ pytest
 httpx
 google-genai
 anthropic
-duckduckgo-search
+ddgs

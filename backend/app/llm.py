@@ -95,11 +95,15 @@ def call(prompt: str, schema: Type[T], system: str = "", scenario: str = "defaul
     key = _key(system, prompt, schema)
     cassette = CASSETTE_DIR / f"{scenario}.json"
 
-    if mode == "replay":
+    # Demo mode (a named scenario with a recorded cassette) replays even when LLM_MODE=live;
+    # a cassette miss then falls through to a live call instead of failing.
+    auto = mode == "live" and scenario != "default" and cassette.exists()
+    if mode == "replay" or auto:
         data = _load(cassette)
-        if key not in data:
+        if key in data:
+            return schema.model_validate_json(data[key])
+        if not auto:
             raise LLMError(f"No recorded response for this prompt in cassette '{scenario}'.")
-        return schema.model_validate_json(data[key])
 
     provider = _provider()
     p = prompt
