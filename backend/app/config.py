@@ -1,3 +1,4 @@
+import datetime
 import os
 from pathlib import Path
 
@@ -11,3 +12,8 @@ def risk_threshold() -> float:
 
 def step_delay() -> float:
     return float(os.getenv("STEP_DELAY", "0.8"))
+
+
+def today() -> str:
+    """ISO date injected into planner/replanner prompts (override with TODAY_OVERRIDE for tests)."""
+    return os.getenv("TODAY_OVERRIDE") or datetime.date.today().isoformat()

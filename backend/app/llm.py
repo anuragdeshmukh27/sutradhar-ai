@@ -1,5 +1,6 @@
 """Single LLM entry point: provider interface, live/record/replay, retry + model fallback."""
 import hashlib
+import re
 import json
 import os
 import time
@@ -79,6 +80,8 @@ def _generate_with_fallback(provider, system: str, prompt: str, schema: Type[Bas
 
 
 def _key(system: str, prompt: str, schema: Type[BaseModel]) -> str:
+    # The injected date is masked so cassettes recorded on one day still replay on another.
+    system = re.sub(r"(Today's date: )\d{4}-\d{2}-\d{2}", r"\1<date>", system)
     return hashlib.sha256(f"{schema.__name__}\n{system}\n{prompt}".encode()).hexdigest()
 
 

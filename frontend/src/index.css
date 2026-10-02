@@ -1,1 +1,64 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
+
+@theme {
+  --font-sans: "Segoe UI", "Nirmala UI", system-ui, -apple-system, sans-serif;
+  --color-bg: #0b1020;
+  --color-panel: #121a2e;
+  --color-panel2: #17213a;
+  --color-line: #263252;
+  --color-ink: #e8edf8;
+  --color-mute: #9aa8c7;
+  --color-accent: #7c8cff;
+  --color-s-pending: #7c8aa8;
+  --color-s-running: #38bdf8;
+  --color-s-done: #34d399;
+  --color-s-flagged: #fb7185;
+  --color-s-await: #fbbf24;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 20% -10%, #18214a 0%, var(--color-bg) 55%);
+  color: var(--color-ink);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* React Flow dark theme tweaks */
+.react-flow { background: transparent; }
+.react-flow__attribution { display: none; }
+.react-flow__controls button {
+  background: var(--color-panel2); color: var(--color-ink); border-bottom: 1px solid var(--color-line);
+}
+.react-flow__controls button:hover { background: var(--color-line); }
+.react-flow__controls button svg { fill: var(--color-ink); }
+.react-flow__edge-path { stroke: #4a5a86; stroke-width: 2; }
+.react-flow__edge.animated .react-flow__edge-path { stroke: var(--color-s-running); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #2b3a63; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(56, 189, 248, .55); }
+  70%  { box-shadow: 0 0 0 14px rgba(56, 189, 248, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+}
+@keyframes flash-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  30% { box-shadow: 0 0 0 6px rgba(52, 211, 153, .9), 0 0 36px rgba(52, 211, 153, .7); }
+}
+@keyframes flash-red {
+  0% { opacity: 1; }
+  100% { opacity: .35; }
+}
+@keyframes slide-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+.pulse-ring { animation: pulse-ring 1.4s infinite; }
+.flash-green { animation: flash-green 1.2s ease-in-out 3; }
+.flash-red { animation: flash-red 1.2s ease-in forwards; border-style: dashed !important; }
+.slide-in { animation: slide-in .25s ease-out; }
