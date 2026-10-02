@@ -26,6 +26,7 @@ export function RightPanel({ s, setTab, onToast }: { s: State; setTab: (t: Tab) 
           </button>
         ))}
       </div>
+      <Metrics s={s} />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {s.tab === 'premortem' && <Premortem s={s} />}
         {s.tab === 'approvals' && <Approvals s={s} onToast={onToast} />}
@@ -190,3 +191,29 @@ function OutboxTab({ s }: { s: State }) {
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <div><div className="mb-1.5 text-sm font-bold uppercase tracking-wide text-mute">{title}</div><div className="flex flex-col gap-2">{children}</div></div>
 )
+
+// rough manual effort (minutes) a person would spend on each kind of step
+const MANUAL_MIN: Record<string, number> = {
+  web_search: 30, update_tracker: 20, book_venue: 90, request_permission: 45,
+  create_poster_brief: 40, send_email: 15, schedule_event: 10,
+}
+
+function Metrics({ s }: { s: State }) {
+  if (!s.nodes.length) return null
+  const mins = s.nodes.filter((n) => n.status === 'done').reduce((t, n) => t + (MANUAL_MIN[n.tool] ?? 20), 0)
+  const items = [
+    { label: 'Auto-recovered', value: s.healed.length, hint: 'steps re-planned without restarting' },
+    { label: 'Approvals asked', value: s.approvals.length, hint: 'human checkpoints' },
+    { label: 'Est. time saved', value: mins >= 60 ? `${(mins / 60).toFixed(1)} h` : `${mins} min`, hint: 'vs doing the done steps by hand (estimate)' },
+  ]
+  return (
+    <div className="grid grid-cols-3 gap-2 border-b border-line p-3">
+      {items.map((m) => (
+        <div key={m.label} title={m.hint} className="rounded-xl bg-panel2 px-3 py-2 text-center">
+          <div className="text-2xl font-extrabold text-accent">{m.value}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-mute">{m.label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
